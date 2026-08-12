@@ -122,8 +122,12 @@ class ViborgEksterne:
         # Medarbejder (månedsløn) and Medarbejder (timeløn)
         return self.settings["exporters.plan2learn.allowed_engagement_types"]
 
-    def _get_disallowed_org_units(self):
-        return self.settings["exporters.exports_viborg_eksterne.disallowed_org_units"]
+    def _get_disallowed_org_units(self) -> list[str]:
+        # Contains UUIDs for org-units to ignore under LoraCache
+        # Contains org-unit names for org-units to ignore when running under MoraHelpers
+        return self.settings.get(
+            "exporters.exports_viborg_eksterne.disallowed_org_units", []
+        )
 
     def _gen_from_loracache(self, employee, lc, lc_historic):
         for eng in filter(
