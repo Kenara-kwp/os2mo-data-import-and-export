@@ -15,6 +15,7 @@ class MockLoRaCache:
     _org_unit_uuid = "org-unit-uuid"
     _org_unit_name = "Enhedsnavn"
     _org_unit_user_key = "Enhedsnr"
+    _org_unit_type_uuid = "org-unit-type-uuid"
     _org_unit_type = "Enhedstype"
 
     _engagement_uuid = "engagement-uuid"
@@ -48,6 +49,8 @@ class MockLoRaCache:
     def units(self):
         unit = {
             "name": self._org_unit_name,
+            "user_key": self._org_unit_user_key,
+            "unit_type": self._org_unit_type_uuid,
             "acting_manager_uuid": self._manager_uuid,
         }
         return {self._org_unit_uuid: [unit]}
@@ -83,7 +86,10 @@ class MockLoRaCache:
 
     @property
     def classes(self):
-        return {}
+        _class = {
+            "title": self._org_unit_type,
+        }
+        return {self._org_unit_type_uuid: _class}
 
 
 class MockLoraCacheHistoric(MockLoRaCache):
@@ -92,7 +98,7 @@ class MockLoraCacheHistoric(MockLoRaCache):
         _class = {
             "title": self._engagement_type_title,
         }
-        return {self._engagement_type_uuid: _class}
+        return {**super().classes, self._engagement_type_uuid: _class}
 
 
 class TestableViborgEksterne(ViborgEksterne):
