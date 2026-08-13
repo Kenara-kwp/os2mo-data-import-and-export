@@ -1,6 +1,9 @@
 from unittest import TestCase
 from unittest.mock import MagicMock
 
+import pytest
+from more_itertools import one
+
 from ..viborg_eksterne import ViborgEksterne
 
 
@@ -102,10 +105,66 @@ class MockLoraCacheHistoric(MockLoRaCache):
 
 
 class TestableViborgEksterne(ViborgEksterne):
+    """Settings without `disallowed_org_units`, as in an unconfigured install."""
+
     def _load_settings(self):
         self.settings = {
             "exporters.plan2learn.allowed_engagement_types": [],
         }
+
+
+def _export(instance: ViborgEksterne) -> list[dict]:
+    """Run an export and return the rows handed to `_write_csv`."""
+    mh = MagicMock()
+    instance.export_engagement(mh, "filename", MockLoRaCache(), MockLoraCacheHistoric())
+    return mh._write_csv.call_args[0][1]
+
+
+def _export_with_disallowed(disallowed: list[str]) -> list[dict]:
+    """Run an export with `disallowed_org_units` configured.
+
+    The setting must be in place before `_load_settings` runs, which happens
+    during construction, so it is baked into a subclass.
+    """
+
+    class _Instance(TestableViborgEksterne):
+        def _load_settings(self):
+            super()._load_settings()
+            key = "exporters.exports_viborg_eksterne.disallowed_org_units"
+            self.settings[key] = disallowed
+
+    return _export(_Instance())
+
+
+def test_unset_disallowed_org_units_exports_everything() -> None:
+    """An install without the setting must export, not crash."""
+    row = one(_export(TestableViborgEksterne()))
+
+    assert row["OrganisationsenhedUUID"] == MockLoRaCache._org_unit_uuid
+
+
+def test_disallowed_org_unit_uuid_is_excluded() -> None:
+    assert _export_with_disallowed([MockLoRaCache._org_unit_uuid]) == []
+
+
+@pytest.mark.parametrize(
+    "disallowed",
+    [
+        pytest.param([], id="empty"),
+        pytest.param(["some-other-org-unit-uuid"], id="unrelated-uuid"),
+    ],
+)
+def test_org_unit_exported_when_not_disallowed(disallowed: list[str]) -> None:
+    row = one(_export_with_disallowed(disallowed))
+
+    assert row["OrganisationsenhedUUID"] == MockLoRaCache._org_unit_uuid
+
+
+def test_disallowed_org_unit_name_is_not_excluded() -> None:
+    """The LoRa cache path matches on org unit UUID, not name."""
+    row = one(_export_with_disallowed([MockLoRaCache._org_unit_name]))
+
+    assert row["OrganisationsenhedUUID"] == MockLoRaCache._org_unit_uuid
 
 
 class TestExportEngagement(TestCase):
