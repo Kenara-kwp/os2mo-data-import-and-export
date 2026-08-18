@@ -9,7 +9,6 @@ from contextlib import asynccontextmanager
 from typing import Annotated
 from typing import AsyncGenerator
 
-import sentry_sdk
 from fastapi import APIRouter
 from fastapi import Depends
 from fastapi import FastAPI
@@ -323,8 +322,6 @@ async def index() -> dict[str, str]:
 def create_app(**kwargs) -> FastAPI:
     settings: Settings = Settings(**kwargs)
     settings.start_logging_based_on_settings()
-    if settings.sentry_dsn:
-        sentry_sdk.init(dsn=settings.sentry_dsn)
 
     fastramqpi = FastRAMQPI(
         application_name="sql-export", settings=settings.fastramqpi, graphql_version=22
