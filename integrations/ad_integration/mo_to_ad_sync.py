@@ -6,7 +6,6 @@ from typing import Optional
 from typing import Tuple
 
 import click
-import sentry_sdk
 from fastramqpi.ra_utils.load_settings import load_settings
 from fastramqpi.ra_utils.tqdm_wrapper import tqdm
 
@@ -232,13 +231,7 @@ def main(
     dry_run: bool,
 ):
     start_logging()
-
-    settings = load_settings()
-    if "crontab.SENTRY_DSN" in settings:
-        sentry_sdk.init(dsn=settings["crontab.SENTRY_DSN"])
-
     reader = ADParameterReader()
-
     lc, lc_historic = fetch_loracache() if lora_speedup else (None, None)
     writer = ADWriter(
         lc=lc,

@@ -9,7 +9,6 @@ from typing import Optional
 from typing import Tuple
 
 import click
-import sentry_sdk
 from fastramqpi.ra_utils.apply import apply
 from fastramqpi.ra_utils.jinja_filter import create_filters
 from fastramqpi.ra_utils.load_settings import load_settings
@@ -855,10 +854,6 @@ class AdMoSync:
 )
 def sync(sync_user):
     sync = AdMoSync()
-
-    if "crontab.SENTRY_DSN" in sync.settings:
-        sentry_sdk.init(dsn=sync.settings["crontab.SENTRY_DSN"])
-
     if sync_user:
         sync.update_single_user(str(sync_user))
     else:
