@@ -585,6 +585,7 @@ def main(*args, **kwargs):
         gql_version=22,
     )
     res = paginated_query(graphql_client=client, query=QUERY, page_size=100)
+    res = [r for r in res if r["current"]["root"]]
     res = [
         r["current"]
         for r in res
