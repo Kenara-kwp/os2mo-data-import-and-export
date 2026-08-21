@@ -145,6 +145,11 @@ class ViborgEksterne:
             "exporters.exports_viborg_eksterne.disallowed_root_org_units", []
         )
 
+    def _get_actual_disallowed_engagement_types(self) -> list[str]:
+        return self.settings.get(
+            "exporters.exports_viborg_eksterne.disallowed_engagement_types", []
+        )
+
     def make_client(self) -> GraphQLClient:
         return GraphQLClient(
             url=f"{self._gql_settings.mora_base}/graphql/v30",
@@ -165,7 +170,7 @@ class ViborgEksterne:
             )
         return self._sync_client_session
 
-    def is_org_unit_disallowed(self, org_unit_uuid: str) -> bool:
+    def _is_org_unit_disallowed(self, org_unit_uuid: str) -> bool:
         root_name = ""
         filter = {"uuids": str(org_unit_uuid)}
         query = """
@@ -201,6 +206,15 @@ class ViborgEksterne:
 
         return root_name in self._get_disallowed_root_org_units()
 
+    def _is_engagement_type_disallowed(self, engagement_type: str) -> bool:
+        return engagement_type in self._get_actual_disallowed_engagement_types()
+
+    # Basic filter,
+    def _is_engagement_disallowed(self, eng) -> bool:
+        return self._is_engagement_type_disallowed(
+            eng[0]["engagement_type"]
+        ) or self._is_org_unit_disallowed(eng[0]["org_unit"])
+
     def _gen_from_loracache(self, employee, lc, lc_historic):
         for eng in filter(
             lambda x: x[0]["user"] == employee["uuid"], lc_historic.engagements.values()
@@ -211,11 +225,11 @@ class ViborgEksterne:
             #    continue
             if engv["engagement_type"] in self._get_disallowed_engagement_types():
                 continue
+            if self._is_engagement_disallowed(eng):
+                continue
 
             org_unit_uuid = engv["unit"]
             org_unit_name = lc.units[org_unit_uuid][0]["name"]
-            if self.is_org_unit_disallowed(org_unit_uuid):
-                continue
 
             org_unit_user_key = lc.units[org_unit_uuid][0]["user_key"]
             org_unit_type_uuid = lc.units[org_unit_uuid][0]["unit_type"]
@@ -285,12 +299,12 @@ class ViborgEksterne:
             ):
                 continue
 
+            if self._is_engagement_disallowed(eng):
+                continue
+
             valid_from = datetime.datetime.strptime(eng["validity"]["from"], "%Y-%m-%d")
 
             org_unit_uuid = eng["org_unit"]["uuid"]
-
-            if self.is_org_unit_disallowed(org_unit_uuid):
-                continue
 
             manager = self._find_manager(org_unit_uuid, mh)
             if manager:
